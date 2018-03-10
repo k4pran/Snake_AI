@@ -60,37 +60,40 @@ class Agent:
         if self.epsilon < np.random.rand():
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
-            return random.randrange(self.action_space)
+                action_index = random.randrange(len(self.action_space))
+            return self.action_space[action_index]
         else:
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
-            pred_rewards = self.model.predict(state)
-            action = np.argmax(pred_rewards)
-            return np.argmax(self.action_space[action])
+
+            q_reward = self.model.predict(state)
+            max_q = np.unravel_index(np.argmax(q_reward), q_reward.shape)
+            return self.action_space[np.argmax(max_q)]
 
 
 def create_model(img_sample, actions):
     global agent
     img_sample = preprocess_image(img_sample)
-    rows = img_sample.shape[0]
-    cols = img_sample.shape[1]
     action_space = len(actions)
+    img_sample = np.array(img_sample)
+    img_sample = np.reshape(img_sample, (80, 80, 1))
 
-    return build_cnn(1, rows, cols, action_space)
+    return build_cnn(img_sample.shape, action_space)
 
 
 def preprocess_image(img):
     img = rgb2grey(img)
     img = resize(img, (80, 80))
+    img = np.reshape(img, (1, 80, 80, 1))
     return img
 
 
-def build_cnn(channels, rows, cols, action_space):
+def build_cnn(shape, action_space):
     model = Sequential()
-    model.add(Conv2D(filters=32, kernel_size=(8, 8), input_shape=(rows, cols, channels), activation='relu'))
+    model.add(Conv2D(filters=32, kernel_size=(8, 8), input_shape=(shape), activation='relu'))
 
     model.add(Dense(units=64, activation='relu'))
-    model.add(Dense(units=action_space, activation='sigmoid'))
+    model.add(Dense(4, activation='linear'))
 
     model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
     return model

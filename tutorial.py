@@ -15,12 +15,12 @@ agent = None
 display = pygame.display.set_mode((settings['display_width'], settings['display_height']))
 pygame.display.set_caption('Snake')
 
-action_space = {
-    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_UP})    : 0,
-    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_RIGHT}) : 1,
-    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_DOWN})  : 2,
-    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_LEFT})  : 3,
-}
+action_space = [
+    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_UP})    ,
+    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_RIGHT}) ,
+    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_DOWN})  ,
+    pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_LEFT})  ,
+]
 
 default_font = settings['default_font']
 title_font = settings['title_font']
