@@ -20,7 +20,7 @@ def get_settings(**kwargs):
             'autostart': True,
 
             'block_dim': 20,
-            'auto_reset': False,
+            'auto_reset': True,
             'agent_hook': True,
             'starting_tail': 0,
             'fps': 10,

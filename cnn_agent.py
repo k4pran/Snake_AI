@@ -13,7 +13,7 @@ from skimage import data
 from skimage.viewer import ImageViewer
 import numpy as np
 
-batch_size = 1000
+batch_size = 5
 
 class Agent:
 
@@ -35,10 +35,15 @@ class Agent:
 
     def store_memory(self, state, action, reward, next_state, done):
         state = preprocess_image(state)
+        next_state = preprocess_image(next_state)
         self.memory.append((state, action, reward, next_state, done))
 
 
     def learn(self):
+
+        if len(self.memory) < batch_size:
+            return
+
         sample = random.sample(self.memory, batch_size)
 
         for memory in sample:
@@ -50,9 +55,8 @@ class Agent:
                 pred_next_reward = reward + self.gamma * np.argmax(self.model.predict(next_state)[0])
 
             pred_current_rewards = self.model.predict(state)[0]
-            pred_current_rewards[action] = pred_next_reward
-            self.model.fit(state, pred_current_rewards, epochs=1, verbose=0)
-
+            pred_current_rewards[self.action_space.index(action)] = pred_next_reward
+            self.model.fit(state, pred_current_rewards.reshape((1, 4)), epochs=1, verbose=0)
 
     def act(self, state):
         state = preprocess_image(state)
@@ -61,24 +65,25 @@ class Agent:
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
                 action_index = random.randrange(len(self.action_space))
+                print(self.action_space[action_index])
             return self.action_space[action_index]
         else:
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
 
             q_reward = self.model.predict(state)
-            max_q = np.unravel_index(np.argmax(q_reward), q_reward.shape)
+            max_q = np.argmax(q_reward)
+            print(self.action_space[np.argmax(max_q)])
             return self.action_space[np.argmax(max_q)]
 
 
 def create_model(img_sample, actions):
     global agent
     img_sample = preprocess_image(img_sample)
-    action_space = len(actions)
     img_sample = np.array(img_sample)
     img_sample = np.reshape(img_sample, (80, 80, 1))
 
-    return build_cnn(img_sample.shape, action_space)
+    return build_cnn(img_sample.shape)
 
 
 def preprocess_image(img):
@@ -88,9 +93,10 @@ def preprocess_image(img):
     return img
 
 
-def build_cnn(shape, action_space):
+def build_cnn(shape):
     model = Sequential()
     model.add(Conv2D(filters=32, kernel_size=(8, 8), input_shape=(shape), activation='relu'))
+    model.add(Flatten())
 
     model.add(Dense(units=64, activation='relu'))
     model.add(Dense(4, activation='linear'))

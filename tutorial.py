@@ -99,7 +99,7 @@ def init_env():
     while collided:
         apple = spawn_apple(settings['display_width'], settings['display_height'], SEG_DIM)
         collided = False
-        if any_collisions(apple, walls, tunnels, tail, head, [i['rect'] for i in stars]):
+        if any_collisions(apple, walls, tunnels, tail, head, [i['star_rect'] for i in stars]):
             collided = True
 
 
@@ -271,7 +271,11 @@ def render():
 
     render_score()
     pygame.display.update()
+    update_agent()
 
+def update_agent():
+    if settings['agent_hook']:
+        agent.learn()
 
 def intro_screen():
     global display
@@ -322,6 +326,8 @@ def game_loop(done=False):
         state = pygame.surfarray.array3d(display)
 
         if game_over:
+            if settings['auto_reset']:
+                create_game()
             while game_over:
                 display.fill(settings['background_color'])
                 display_message("GAME OVER", pygame.Color('red'), True, -60)
@@ -422,6 +428,7 @@ def game_loop(done=False):
         next_state = pygame.surfarray.array3d(display)
 
         if settings['agent_hook']:
+            reward = reward if not reward == None else 0
             agent.store_memory(state, action, reward, next_state, game_over)
 
 
