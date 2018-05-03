@@ -1,8 +1,6 @@
-import simple_greedy_agent
 from settings import *
 from generator import *
 from collisions import *
-import cnn_agent as agent_interace
 
 """
 GLOBALS
@@ -52,6 +50,12 @@ total_score = 0
 apples_ate = 0
 tunnels_burrowed = 0
 stars_collected = 0
+
+state = pygame.surfarray.array3d(display)
+action = None
+reward = None
+next_state = None
+done = False
 
 
 """
@@ -118,10 +122,16 @@ def init_snake():
 
 
 def init_agents():
-    global agent
-    model = agent_interace.create_model(pygame.surfarray.array3d(display), action_space)
-    agent = agent_interace.Agent(model, action_space)
+    global agent, state, next_state
+    if settings['agent_hook']:
+        if settings['agent_class']:
 
+            if settings['agent_hook']:
+                next_state = pygame.surfarray.array3d(display)
+                if settings['state_info']['positions']:
+                    next_state = [head, apple, settings['block_dim'], facing, tail]
+
+                agent = settings['agent_class'](action_space, state)
 
 def reset_scores():
     global total_score, apples_ate, tunnels_burrowed, stars_collected
@@ -288,7 +298,6 @@ def render_env():
     for star in stars:
         display.blit(star_img, star['star_rect'])
 
-
     render_score()
     pygame.display.update()
     update_agent()
@@ -306,7 +315,7 @@ def update_agent():
 GAME LOOP
 """
 def intro_loop():
-    global display
+    global display, done
     intro = True
 
     while intro:
@@ -324,40 +333,36 @@ def intro_loop():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
-                return done
+                return
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
                     done = False
-                    return done
+                    return
 
                 elif event.key == pygame.K_SPACE:
                     done = True
-                    return done
+                    return
 
 
-def game_loop(done=False):
-    global apple, total_score, apples_ate, tunnels_burrowed, stars_collected, direction, facing
+def game_loop():
+    global done, apple, total_score, apples_ate, tunnels_burrowed, stars_collected, direction, facing, \
+           state, action, reward, next_state
 
     game_over = False
     clock = pygame.time.Clock()
 
-    # variables used exclusively for agents
-    state      = pygame.surfarray.array3d(display)
-    action     = None
-    reward     = None
-    next_state = None
-
     while not done:
+        state = next_state
 
         if game_over:
             done = handle_game_over()
 
-        state = pygame.surfarray.array3d(display)
         if settings['agent_hook']:
-            get_agent_input()
+            action = agent.act(state)
+            pygame.event.post(action)
 
-        update_action([action], [done])
+        update_action()
         prev_head = head.copy()
         prev_direction = direction
         move_head(direction)
@@ -368,22 +373,23 @@ def game_loop(done=False):
         fade_stars()
         clock.tick(10)
         render_env()
-        next_state = pygame.surfarray.array3d(display)
+
+        if settings['agent_hook']:
+            if settings['state_info']['pixels']:
+                next_state = pygame.surfarray.array3d(display)
+            elif settings['state_info']['positions']:
+                next_state = [head, apple, settings['block_dim'], facing, tail]
 
         if settings['agent_hook']:
             reward = reward if not reward == None else 0
             agent.store_memory(state, action, reward, next_state, game_over)
 
 
-def get_agent_input():
-    pygame.event.post(agent.act(pygame.surfarray.array3d(display)))
-
-
-def update_action(action, done):
-    global direction
+def update_action():
+    global direction, done, action
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            done[0] = True
+            done = True
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
@@ -398,7 +404,7 @@ def update_action(action, done):
             elif event.key == pygame.K_LEFT:
                 direction = Directions.LEFT
 
-            action[0] = action_space[event.type]
+            action = action_space[event.type]
 
 
 def handle_game_over():
@@ -406,6 +412,7 @@ def handle_game_over():
     if settings['auto_reset']:
         create_game()
         reset_scores()
+        game_over = False
     while game_over:
         display.fill(settings['background_color'])
         display_message("GAME OVER", pygame.Color('red'), True, -60)
@@ -451,9 +458,8 @@ def handle_collisions(prev_head, prev_direction):
     if settings['tunnels_on']:
         handle_tunnel_collisions()
 
-    if has_boundary_collided(head, settings['display_width'], settings['display_height']):
+    if has_boundary_collided(head, settings['display_width'], settings['display_height'], settings['block_dim']):
         return (0, True)
-
     return (0, False)
 
 
@@ -480,7 +486,7 @@ def handle_tunnel_collisions():
 
 if __name__ == "__main__":
     create_game()
-    done = intro_loop()
-    game_loop(done)
+    intro_loop()
+    game_loop()
     pygame.quit()
     quit()
