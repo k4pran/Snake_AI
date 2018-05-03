@@ -1,10 +1,15 @@
 from directions import Directions
 import pygame
+from cnn_agent import CnnAgent
+from drunken_snake import DrunkSnake
+from simple_greedy_agent import GreedySnake
 
 
 def get_settings(**kwargs):
 
+
         settings = {
+            'render_env': False,
             'display_width': 800,
             'display_height': 600,
             'background_color': pygame.Color('white'),
@@ -22,8 +27,13 @@ def get_settings(**kwargs):
             'block_dim': 20,
             'auto_reset': True,
             'agent_hook': True,
+            'agent_class': CnnAgent,
+            'agent_params': {},
             'starting_tail': 0,
             'fps': 10,
+
+            'state_info': {'pixels': True,
+                           'positions' : False},
 
             'apple_density': 0.002,
             'apple_spawn_rate': 0.001,
