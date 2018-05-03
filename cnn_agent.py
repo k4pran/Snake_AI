@@ -11,26 +11,25 @@ from skimage.color import rgb2grey
 from skimage.exposure import rescale_intensity
 from skimage import data
 from skimage.viewer import ImageViewer
+from agent import Agent
 import numpy as np
 
 batch_size = 5
 
-class Agent:
 
-    def __init__(self, model, action_space, mem_capacity=1000, learning_rate=0.01, epsilon=0.9,
-                 epsilon_decay=0.99, epsilon_min=0.005, gamma=0.99, name="agent_snake"):
-        self.name          = name
-        self.model         = model
-        self.mem_capacity  = mem_capacity
-        self.memory = deque(maxlen=mem_capacity)
-        self.learning_rate = learning_rate
-        self.epsilon       = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.epsilon_min   = epsilon_min
-        self.gamma         = gamma
-        self.action_space  = action_space
+class CnnAgent(Agent):
 
-        self.short_mem     = None
+    def __init__(self, action_space, state_space, **kwargs):
+        super().__init__(action_space, state_space)
+        self.name          = kwargs.get("name", "agent snake")
+        self.model         = create_model(self.state_space)
+        self.mem_capacity  = kwargs.get("mem_capacity", 1000)
+        self.memory        = deque(maxlen=kwargs.get("mem_capacity", 1000))
+        self.learning_rate = kwargs.get("learning_rate", 0.01)
+        self.epsilon       = kwargs.get("epsilon", 0.99)
+        self.epsilon_decay = kwargs.get("epsilon_decay", 0.99)
+        self.epsilon_min   = kwargs.get("epsilon_min", 0.005)
+        self.gamma         = kwargs.get("gamma", 0.99)
 
 
     def store_memory(self, state, action, reward, next_state, done):
@@ -61,7 +60,7 @@ class Agent:
     def act(self, state):
         state = preprocess_image(state)
 
-        if self.epsilon < np.random.rand():
+        if np.random.rand() < self.epsilon:
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
                 action_index = random.randrange(len(self.action_space))
@@ -77,7 +76,7 @@ class Agent:
             return self.action_space[np.argmax(max_q)]
 
 
-def create_model(img_sample, actions):
+def create_model(img_sample):
     global agent
     img_sample = preprocess_image(img_sample)
     img_sample = np.array(img_sample)
