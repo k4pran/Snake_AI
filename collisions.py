@@ -17,6 +17,12 @@ def has_self_collided(head, tail):
 def has_tunnel_collided(head, tunnels):
     return head.collidelist(tunnels)
 
+def has_boundary_collided(head, display_width, display_height, block_dim):
+    return head.left < 0 or \
+           head.top < 0 or \
+           head.right > display_width or \
+           head.bottom > display_height
+
 
 def has_star_collided(head, stars, score, reward, stars_collected):
     star_ind = head.collidelist([i['star_rect'] for i in stars])
