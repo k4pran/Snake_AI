@@ -53,7 +53,7 @@ stars_collected = 0
 
 state = pygame.surfarray.array3d(display)
 action = None
-reward = None
+reward = 0
 next_state = None
 done = False
 
@@ -145,6 +145,12 @@ def create_game():
     init_env()
     init_snake()
     init_agents()
+
+def reset_game():
+    init_gfx()
+    init_env()
+    init_snake()
+    reset_scores()
 
 
 """
@@ -300,15 +306,6 @@ def render_env():
 
     render_score()
     pygame.display.update()
-    update_agent()
-
-
-"""
-AGENT CONTROL
-"""
-def update_agent():
-    if settings['agent_hook']:
-        agent.learn()
 
 
 """
@@ -351,6 +348,14 @@ def game_loop():
 
     game_over = False
     clock = pygame.time.Clock()
+    render_env()
+    render_score()
+
+    if settings['agent_hook']:
+        if settings['state_info']['pixels']:
+            next_state = pygame.surfarray.array3d(display)
+        elif settings['state_info']['positions']:
+            next_state = [head, apple, settings['block_dim'], facing, tail]
 
     while not done:
         state = next_state
@@ -381,8 +386,8 @@ def game_loop():
                 next_state = [head, apple, settings['block_dim'], facing, tail]
 
         if settings['agent_hook']:
-            reward = reward if not reward == None else 0
             agent.store_memory(state, action, reward, next_state, game_over)
+            agent.learn()
 
 
 def update_action():
@@ -393,25 +398,22 @@ def update_action():
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
-                direction = Directions.UP
+                direction = Directions.UP # key 273
 
             elif event.key == pygame.K_RIGHT:
-                direction = Directions.RIGHT
+                direction = Directions.RIGHT # key 275
 
             elif event.key == pygame.K_DOWN:
-                direction = Directions.DOWN
+                direction = Directions.DOWN # key 274
 
             elif event.key == pygame.K_LEFT:
-                direction = Directions.LEFT
-
-            action = action_space[event.type]
+                direction = Directions.LEFT # key 276
 
 
 def handle_game_over():
     game_over = True
     if settings['auto_reset']:
-        create_game()
-        reset_scores()
+        reset_game()
         game_over = False
     while game_over:
         display.fill(settings['background_color'])
@@ -438,10 +440,10 @@ def handle_collisions(prev_head, prev_direction):
     global total_score, stars_collected
 
     if has_self_collided(head, tail):
-        return (0, True)
+        return (settings['game_over_reward'], True)
 
     if has_wall_collided(head, walls):
-        return (0, True)
+        return (settings['game_over_reward'], True)
 
     if has_apple_collided(head, apple, total_score, settings['apple_reward'], apples_ate):
         handle_apple_collisions(prev_head, prev_direction)
@@ -459,8 +461,8 @@ def handle_collisions(prev_head, prev_direction):
         handle_tunnel_collisions()
 
     if has_boundary_collided(head, settings['display_width'], settings['display_height'], settings['block_dim']):
-        return (0, True)
-    return (0, False)
+        return (settings['game_over_reward'], True)
+    return (2, False)
 
 
 def handle_apple_collisions(prev_head, prev_direction):

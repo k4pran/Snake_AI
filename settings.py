@@ -24,7 +24,7 @@ def get_settings(**kwargs):
             'starting_direction': Directions.RIGHT,
             'autostart': True,
 
-            'block_dim': 20,
+            'block_dim': 80,
             'auto_reset': True,
             'agent_hook': True,
             'agent_class': CnnAgent,
@@ -38,6 +38,7 @@ def get_settings(**kwargs):
             'apple_density': 0.002,
             'apple_spawn_rate': 0.001,
             'apple_reward': 5,
+            'game_over_reward': -50,
 
             'walls_on': False,
             'wall_density': 0.10,

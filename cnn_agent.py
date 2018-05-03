@@ -14,7 +14,7 @@ from skimage.viewer import ImageViewer
 from agent import Agent
 import numpy as np
 
-batch_size = 5
+batch_size = 3
 
 
 class CnnAgent(Agent):
@@ -36,6 +36,7 @@ class CnnAgent(Agent):
         state = preprocess_image(state)
         next_state = preprocess_image(next_state)
         self.memory.append((state, action, reward, next_state, done))
+        print("reward - " + str(reward))
 
 
     def learn(self):
@@ -48,23 +49,31 @@ class CnnAgent(Agent):
         for memory in sample:
             state, action, reward, next_state, done = memory
 
-            if done:
-                pred_next_reward = reward
-            else:
-                pred_next_reward = reward + self.gamma * np.argmax(self.model.predict(next_state)[0])
+            q_value = reward
 
-            pred_current_rewards = self.model.predict(state)[0]
-            pred_current_rewards[self.action_space.index(action)] = pred_next_reward
-            self.model.fit(state, pred_current_rewards.reshape((1, 4)), epochs=1, verbose=0)
+            curr_preds = self.model.predict(state)[0]
+            curr_value = curr_preds[self.action_space.index(action)]
+
+            next_state_preds = self.model.predict(next_state)[0]
+            if done:
+                updated_value = q_value
+
+            else:
+                s1_max_ind = np.argmax(next_state_preds)
+                updated_value = curr_value
+                updated_value = updated_value + self.gamma * (next_state_preds[s1_max_ind] - updated_value)
+
+            updated_values = curr_preds
+            updated_values[self.action_space.index(action)] = updated_value
+            self.model.fit(state, updated_values.reshape((1, 4)), epochs=1, verbose=0)
 
     def act(self, state):
         state = preprocess_image(state)
 
         if np.random.rand() < self.epsilon:
+            action_index = random.randrange(len(self.action_space))
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
-                action_index = random.randrange(len(self.action_space))
-                print(self.action_space[action_index])
             return self.action_space[action_index]
         else:
             if self.epsilon > self.epsilon_min:
@@ -72,8 +81,7 @@ class CnnAgent(Agent):
 
             q_reward = self.model.predict(state)
             max_q = np.argmax(q_reward)
-            print(self.action_space[np.argmax(max_q)])
-            return self.action_space[np.argmax(max_q)]
+            return self.action_space[max_q]
 
 
 def create_model(img_sample):
@@ -97,7 +105,9 @@ def build_cnn(shape):
     model.add(Conv2D(filters=32, kernel_size=(8, 8), input_shape=(shape), activation='relu'))
     model.add(Flatten())
 
-    model.add(Dense(units=64, activation='relu'))
+    model.add(Dense(units=42, activation='relu'))
+    model.add(Dense(units=16, activation='relu'))
+
     model.add(Dense(4, activation='linear'))
 
     model.compile(optimizer='adam', loss='mse', metrics=['accuracy'])
